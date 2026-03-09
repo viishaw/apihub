@@ -17,20 +17,9 @@ pub struct RegisterRequest {
     #[validate(length(min = 8))]
     pub password: String,
     #[validate(length(min = 1, max = 64))]
-    pub group_name: String,
-}
-
-/// 加入群组请求
-#[derive(Debug, Deserialize, Validate)]
-pub struct JoinRequest {
-    #[validate(length(min = 3, max = 32))]
-    pub username: String,
-    #[validate(email)]
-    pub email: String,
-    #[validate(length(min = 8))]
-    pub password: String,
+    pub group_name: Option<String>,
     #[validate(length(min = 6, max = 32))]
-    pub invite_code: String,
+    pub invite_code: Option<String>,
 }
 
 /// 登录请求
@@ -234,4 +223,36 @@ pub struct Pagination {
     pub limit: u32,
     pub total: u64,
     pub total_pages: u32,
+}
+
+// ============ 其他请求/响应 ============
+
+/// 更新群组请求
+#[derive(Debug, Deserialize)]
+pub struct UpdateGroupRequest {
+    pub name: Option<String>,
+    pub settings: Option<serde_json::Value>,
+}
+
+/// 更新 Key 请求
+#[derive(Debug, Deserialize)]
+pub struct UpdateKeyRequest {
+    pub name: Option<String>,
+    pub weight: Option<i32>,
+    pub monthly_quota: Option<f64>,
+}
+
+/// 用量查询
+#[derive(Debug, Deserialize)]
+pub struct UsageQuery {
+    pub period: Option<String>,
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
+}
+
+/// 调整积分请求
+#[derive(Debug, Deserialize)]
+pub struct AdjustCreditsRequest {
+    pub amount: f64,
+    pub reason: String,
 }
