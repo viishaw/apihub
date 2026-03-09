@@ -1,44 +1,40 @@
-# Frontend build stage
-FROM node:18-alpine AS frontend-builder
-
-WORKDIR /app
-RUN npm install pnpm -g
-
-COPY frontend/package*.json ./frontend/
-WORKDIR /app/frontend
-RUN pnpm install
-
-COPY frontend ./
-RUN pnpm build
-
-# Backend build stage
-FROM rust:1.75-alpine AS backend-builder
-
-RUN apk add --no-cache musl-dev
-
+# 构建阶段 - 后端
+FROM rust:1.75 as backend-builder
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
-
 RUN cargo build --release
 
-# Final stage
-FROM alpine:3.19
+# 构建阶段 - 前端
+FROM node:20-alpine as frontend-builder
+WORKDIR /app
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend ./
+RUN npm run build
 
-RUN apk add --no-cache ca-certificates tzdata
-
+# 运行阶段
+FROM debian:bookworm-slim
 WORKDIR /app
 
-# Copy backend binary
-COPY --from=backend-builder /app/target/release/api /app/api
+# 安装运行时依赖
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl3 \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy frontend build
-COPY --from=frontend-builder /app/frontend/dist /app/dist
+# 复制后端二进制
+COPY --from=backend-builder /app/target/release/api /app/apihub
 
-# Copy startup script
-COPY scripts/startup.sh /app/startup.sh
-RUN chmod +x /app/startup.sh
+# 复制前端构建产物
+COPY --from=frontend-builder /app/dist /app/dist
 
+# 创建启动脚本
+RUN echo '#!/bin/bash\n./apihub --host 0.0.0.0 --port 3000\n' > /app/start.sh && \
+    chmod +x /app/start.sh
+
+# 暴露端口
 EXPOSE 3000
 
-CMD ["/app/startup.sh"]
+# 启动应用
+CMD ["./apihub"]

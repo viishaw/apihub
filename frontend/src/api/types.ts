@@ -65,6 +65,40 @@ export interface LeaderboardEntry {
   avatar?: string
 }
 
+// ============ 请求类型 ============
+
+export interface RegisterRequest {
+  username: string
+  email: string
+  password: string
+  group_name?: string
+  invite_code?: string
+}
+
+export interface LoginRequest {
+  username: string
+  password: string
+}
+
+export interface CreateKeyRequest {
+  provider: string
+  api_key: string
+  name?: string
+  base_url?: string
+  monthly_quota?: number
+}
+
+export interface UsageQuery {
+  period?: string
+  start_date?: string
+  end_date?: string
+}
+
+export interface AdjustCreditsRequest {
+  amount: number
+  reason: string
+}
+
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
   content: string
