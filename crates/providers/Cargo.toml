@@ -1,0 +1,26 @@
+[package]
+name = "providers"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+# Async runtime
+tokio.workspace = true
+async-trait.workspace = true
+
+# HTTP client
+reqwest.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Utilities
+uuid.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+futures.workspace = true
+async-stream.workspace = true
+bytes.workspace = true
+tokio-stream.workspace = true
