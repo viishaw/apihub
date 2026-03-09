@@ -13,7 +13,6 @@ use axum::{
 use tower_http::{
     cors::{Any, CorsLayer},
     trace::TraceLayer,
-    request_id::SetRequestIdLayer,
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -43,23 +42,17 @@ async fn main() -> anyhow::Result<()> {
     let config = Config::from_env()?;
     tracing::info!("📝 Configuration loaded");
 
-    // 连接数据库
-    let db = db::connect(&config.database_url).await?;
-    tracing::info!("📦 Database connected");
+    // TODO: 连接数据库
+    // let db = apihub_db::connect(&config.database_url).await?;
+    // tracing::info!("📦 Database connected");
 
-    // 连接 Redis
-    let redis = db::redis_connect(&config.redis_url).await?;
-    tracing::info!("🔴 Redis connected");
-
-    // 运行迁移
-    db::run_migrations(&db).await?;
-    tracing::info!("🔄 Migrations completed");
+    // TODO: 连接 Redis
+    // let redis = apihub_db::redis_connect(&config.redis_url).await?;
+    // tracing::info!("🔴 Redis connected");
 
     // 创建应用状态
     let state = Arc::new(AppState {
         config: config.clone(),
-        db,
-        redis,
     });
 
     // 构建路由
@@ -109,7 +102,6 @@ async fn main() -> anyhow::Result<()> {
         
         // 中间件
         .layer(TraceLayer::new_for_http())
-        .layer(SetRequestIdLayer::x_request_id(uuid::Uuid::new_v4().to_string()))
         .layer(CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any))
         .layer(Extension(state));
 
@@ -127,8 +119,6 @@ async fn main() -> anyhow::Result<()> {
 #[derive(Clone)]
 pub struct AppState {
     pub config: Config,
-    pub db: db::Database,
-    pub redis: redis::Client,
 }
 
 /// 健康检查

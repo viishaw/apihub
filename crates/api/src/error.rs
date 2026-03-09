@@ -12,12 +12,6 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// 应用错误类型
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("Database error: {0}")]
-    Database(#[from] sqlx::Error),
-    
-    #[error("Redis error: {0}")]
-    Redis(#[from] redis::RedisError),
-    
     #[error("Invalid credentials")]
     InvalidCredentials,
     
@@ -51,13 +45,19 @@ pub enum Error {
     #[error("Provider error: {0}")]
     ProviderError(String),
     
+    #[error("Database error: {0}")]
+    Database(#[from] sqlx::Error),
+    
+    #[error("Redis error: {0}")]
+    Redis(#[from] redis::RedisError),
+    
     #[error("Internal error: {0}")]
     Internal(#[from] anyhow::Error),
 }
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
-        let (status, code, message) = match self {
+        let (status, error_code, error_msg): (StatusCode, &'static str, String) = match &self {
             Error::InvalidCredentials => (StatusCode::UNAUTHORIZED, "INVALID_CREDENTIALS", self.to_string()),
             Error::TokenExpired => (StatusCode::UNAUTHORIZED, "TOKEN_EXPIRED", self.to_string()),
             Error::PermissionDenied => (StatusCode::FORBIDDEN, "PERMISSION_DENIED", self.to_string()),
@@ -69,16 +69,16 @@ impl IntoResponse for Error {
             Error::QuotaExceeded => (StatusCode::TOO_MANY_REQUESTS, "QUOTA_EXCEEDED", self.to_string()),
             Error::NoAvailableKey => (StatusCode::SERVICE_UNAVAILABLE, "NO_AVAILABLE_KEY", self.to_string()),
             Error::ProviderError(_) => (StatusCode::BAD_GATEWAY, "PROVIDER_ERROR", self.to_string()),
-            Error::Database(_) => (StatusCode::INTERNAL_SERVER_ERROR, "DATABASE_ERROR", "Internal database error"),
-            Error::Redis(_) => (StatusCode::INTERNAL_SERVER_ERROR, "REDIS_ERROR", "Internal cache error"),
-            Error::Internal(_) => (StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "Internal server error"),
+            Error::Database(_) => (StatusCode::INTERNAL_SERVER_ERROR, "DATABASE_ERROR", "Internal database error".to_string()),
+            Error::Redis(_) => (StatusCode::INTERNAL_SERVER_ERROR, "REDIS_ERROR", "Internal cache error".to_string()),
+            Error::Internal(_) => (StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "Internal server error".to_string()),
         };
 
         let body = json!({
             "success": false,
             "error": {
-                "code": code,
-                "message": message,
+                "code": error_code,
+                "message": error_msg,
             }
         });
 
