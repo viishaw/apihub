@@ -15,6 +15,8 @@ use tower_http::{
     trace::TraceLayer,
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use sqlx::PgPool;
+use redis::Client as RedisClient;
 
 mod routes;
 mod middleware;
@@ -23,7 +25,6 @@ mod error;
 mod dto;
 
 use crate::config::Config;
-use crate::error::Result;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -31,7 +32,7 @@ async fn main() -> anyhow::Result<()> {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "apihub=debug,tower_http=debug".into()),
+                .unwrap_or_else(|_| "apihub=info,tower_http=info".into()),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
@@ -42,17 +43,19 @@ async fn main() -> anyhow::Result<()> {
     let config = Config::from_env()?;
     tracing::info!("📝 Configuration loaded");
 
-    // TODO: 连接数据库
-    // let db = apihub_db::connect(&config.database_url).await?;
-    // tracing::info!("📦 Database connected");
+    // 连接数据库
+    let db = apihub_db::connect_postgres(&config.database_url).await?;
+    tracing::info!("📦 Database connected");
 
-    // TODO: 连接 Redis
-    // let redis = apihub_db::redis_connect(&config.redis_url).await?;
-    // tracing::info!("🔴 Redis connected");
+    // 连接 Redis
+    let redis = apihub_db::connect_redis(&config.redis_url).await?;
+    tracing::info!("🔴 Redis connected");
 
     // 创建应用状态
     let state = Arc::new(AppState {
         config: config.clone(),
+        db,
+        redis,
     });
 
     // 构建路由
@@ -119,6 +122,8 @@ async fn main() -> anyhow::Result<()> {
 #[derive(Clone)]
 pub struct AppState {
     pub config: Config,
+    pub db: PgPool,
+    pub redis: RedisClient,
 }
 
 /// 健康检查
